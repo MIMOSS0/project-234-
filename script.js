@@ -159,6 +159,26 @@ function chair(x, y) {
 // إضافة طاولة
 //--------------------------------
 
+function getNextAvailableTableNumber() {
+    const used = new Set()
+    canvas.getObjects().forEach(o => {
+        if (o.tableGroup || o.name === "table") {
+            if (typeof o.tableNumber === "number") {
+                used.add(o.tableNumber)
+            } else if (o._objects && Array.isArray(o._objects)) {
+                const t = o._objects.find(x => x.type === "text")
+                if (t && t.text) {
+                    const n = parseInt(String(t.text), 10)
+                    if (!isNaN(n)) used.add(n)
+                }
+            }
+        }
+    })
+    let n = 1
+    while (used.has(n)) n++
+    return n
+}
+
 function addTable(lengthCM, seats) {
 
     let widthCM = 80
@@ -167,6 +187,8 @@ function addTable(lengthCM, seats) {
     let tableHeight = (widthCM / 100) * meter
     let dd = document.getElementById("addDropdown")
     if (dd) dd.classList.remove("open")
+
+    const num = getNextAvailableTableNumber()
 
     let table = new fabric.Rect({
 
@@ -181,11 +203,12 @@ function addTable(lengthCM, seats) {
 
     })
 
-    let number = new fabric.Text(String(tableNumber), {
+    let number = new fabric.Text(String(num), {
 
         fontSize: 16,
         originX: "center",
-        originY: "center"
+        originY: "center",
+        name: "tableNumber"
 
     })
 
@@ -216,11 +239,12 @@ function addTable(lengthCM, seats) {
     })
 
     group.name = "table"
+    group.tableNumber = num
     makeTableGroup(group)
 
     canvas.add(group)
 
-    tableNumber++
+    tableNumber = Math.max(tableNumber, num + 1)
 
     totalSeats += seats
     totalTables++
@@ -633,6 +657,17 @@ function makeTableGroup(group) {
     })
     if (group.controls && group.controls.mtr) {
         group.controls.mtr.visible = true
+    }
+    if (typeof group.tableNumber !== "number") {
+        let txt = null
+        if (group._objects && Array.isArray(group._objects)) {
+            txt = group._objects.find(x => x.type === "text")
+            if (txt && !txt.name) txt.name = "tableNumber"
+        }
+        if (txt && txt.text) {
+            const n = parseInt(String(txt.text), 10)
+            if (!isNaN(n)) group.tableNumber = n
+        }
     }
     group._lastGood = { left: group.left, top: group.top, angle: group.angle }
     group.off("mousedown")
