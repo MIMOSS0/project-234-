@@ -1,0 +1,435 @@
+:root {
+    /* default theme: dark */
+    --bg1: #000000;
+    --bg2: #000000;
+    --header-from: #1a0b2e;
+    --header-to: #1a0b2e;
+    --btn-from: #0b1b4f;
+    /* Navy darker */
+    --btn-to: #102a6b;
+    /* Deep blue */
+    --btn-hover: #1e3a8a;
+    /* Slightly lighter for hover */
+    --danger-from: #dc2626;
+    --danger-to: #b91c1c;
+    --danger-hover: #ef4444;
+    --text: #f8fafc;
+    --panel: #000000;
+}
+
+[data-theme="light"] {
+    --bg1: #f8fafc;
+    --bg2: #e2e8f0;
+    --header-from: #1a0b2e;
+    --header-to: #1a0b2e;
+    --btn-from: #0b1b4f;
+    --btn-to: #102a6b;
+    --btn-hover: #1e3a8a;
+    --danger-from: #dc2626;
+    --danger-to: #b91c1c;
+    --danger-hover: #ef4444;
+    --text: #0f172a;
+    --panel: #ffffff;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, "Apple Color Emoji", "Segoe UI Emoji";
+    background: radial-gradient(1200px 600px at 20% 0%, var(--bg1), var(--bg1) 30%, var(--bg2) 70%), linear-gradient(180deg, var(--bg2), var(--bg2) 60%, var(--bg1));
+    color: var(--text);
+}
+
+/* الهيدر */
+
+header {
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 60px;
+
+    background: linear-gradient(90deg, var(--header-from), var(--header-to));
+    color: var(--text);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 20px;
+
+    z-index: 1000;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+
+}
+
+.logo {
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.actions button {
+
+    margin-left: 6px;
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, var(--btn-from), var(--btn-to));
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all .15s ease;
+
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    /* لا نسمح بالنزول لسطر جديد */
+    overflow-x: auto;
+    /* تمرير أفقي عند الضيق */
+    -webkit-overflow-scrolling: touch;
+}
+
+.actions .ic {
+    margin-inline-end: 6px;
+}
+
+.actions .ic svg {
+    width: 18px;
+    height: 18px;
+    vertical-align: -2px;
+}
+
+.actions .lb {
+    white-space: nowrap;
+}
+
+.actions button:hover {
+    background: linear-gradient(180deg, var(--btn-hover), var(--btn-to));
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.actions button:active {
+    transform: translateY(0);
+    filter: brightness(.95);
+}
+
+.actions button.danger {
+    background: linear-gradient(180deg, var(--danger-from), var(--danger-to));
+    box-shadow: 0 8px 16px rgba(220, 38, 38, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.actions button.danger:hover {
+    background: linear-gradient(180deg, var(--danger-hover), var(--danger-to));
+    box-shadow: 0 12px 22px rgba(220, 38, 38, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.actions .lb {
+    display: none !important;
+}
+
+/* تخصيص شريط التمرير داخل الهيدر */
+.actions::-webkit-scrollbar {
+    height: 10px;
+}
+
+.actions::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+}
+
+.actions::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--btn-from), var(--btn-to));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.actions {
+    scrollbar-color: var(--btn-to) rgba(255, 255, 255, 0.08);
+    scrollbar-width: thin;
+}
+
+.stats-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    font-weight: bold;
+}
+
+.stats-inline .sep {
+    opacity: 0.6;
+}
+
+/* جعل نص الإحصائيات أبيض حتى في الوضع الفاتح */
+[data-theme="light"] header .stats-inline,
+[data-theme="light"] header .stats-inline span {
+    color: #ffffff;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown .menu {
+    position: absolute;
+    right: 0;
+    top: 46px;
+    background: #0b1220;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 10px;
+    display: none;
+    min-width: 200px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.35);
+    z-index: 1100;
+}
+
+.dropdown.open .menu {
+    display: block;
+}
+
+.floating-menu {
+    position: fixed;
+    right: auto;
+    top: 60px;
+    background: #0b1220;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 200px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.35);
+    z-index: 2000;
+    display: none;
+}
+
+.floating-menu button {
+    width: 100%;
+    margin: 6px 0;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #1f2937, #111827);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    text-align: right;
+    color: #fff;
+}
+
+.floating-menu button:hover {
+    background: linear-gradient(180deg, #334155, #1f2937);
+}
+
+.dropdown .menu button {
+    width: 100%;
+    margin: 6px 0;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #1f2937, #111827);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    text-align: right;
+}
+
+.dropdown .menu button:hover {
+    background: linear-gradient(180deg, #334155, #1f2937);
+}
+
+/* زر فتح الدرج */
+.drawer-toggle {
+    background: #ffffff;
+    color: #1a0b2e;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    font-weight: 900;
+}
+
+.drawer-toggle:hover {
+    filter: brightness(.95);
+}
+
+/* الدرج الجانبي */
+.drawer {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background: var(--panel);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    transform: translateX(100%);
+    transition: transform .2s ease;
+    z-index: 1200;
+    color: var(--text);
+}
+
+.drawer.open {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 14px 16px;
+    font-weight: 800;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-content {
+    padding: 12px;
+    display: grid;
+    grid-gap: 8px;
+}
+
+.drawer-content hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 6px 0;
+}
+
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 1190;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* التخطيط */
+
+.layout {
+
+    display: flex;
+    margin-top: 60px;
+    height: calc(100vh - 60px);
+
+}
+
+/* القاعة - تنطبق على جميع المقاسات */
+main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+canvas {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.grabbing {
+    cursor: grabbing !important;
+}
+
+.grab {
+    cursor: grab !important;
+}
+
+/* تجاوبية */
+@media (max-width: 1200px) {
+    .actions button {
+        padding: 9px 12px;
+        font-size: 15px;
+    }
+
+    .dropdown .menu {
+        min-width: 180px;
+    }
+}
+
+@media (max-width: 900px) {
+    header {
+        height: 56px;
+    }
+
+    .layout {
+        margin-top: 56px;
+    }
+
+    .actions button {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
+    .actions .lb {
+        display: none;
+    }
+
+    .dropdown .menu {
+        top: 44px;
+    }
+
+    .actions {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px;
+        padding-bottom: 6px;
+    }
+
+    .actions button {
+        padding: 8px 9px;
+        font-size: 13px;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+
+    .stats-inline {
+        display: none;
+    }
+
+    /* الشريط الجانبي */
+
+    aside {
+
+        width: 220px;
+        background: var(--panel);
+        color: var(--text);
+        padding: 20px;
+        border-right: 1px solid #ddd;
+
+    }
+
+    aside button {
+
+        width: 100%;
+        margin-bottom: 8px;
+
+    }
+
+    .stats {
+
+        margin-top: 20px;
+        font-weight: bold;
+
+    }
+}
