@@ -276,12 +276,17 @@ header {
     right: 0;
     bottom: 0;
     width: 320px;
+    min-width: 320px;
+    max-width: 320px;
     background: var(--panel);
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     transform: translateX(100%);
     transition: transform .2s ease;
     z-index: 1200;
     color: var(--text);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .drawer.open {
@@ -295,12 +300,32 @@ header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.drawer-header h3 {
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+}
+
+/* إخفاء الإحصائيات من لوحة معلومات الطاولة - تظهر في الهيدر فقط */
+.drawer-header .mini-stats {
+    display: none !important;
 }
 
 .drawer-content {
     padding: 16px;
     display: grid;
     grid-gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .drawer-content hr {
@@ -329,11 +354,21 @@ header {
     gap: 8px;
     font-size: 12px;
     opacity: .8;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .field {
     display: grid;
     grid-gap: 6px;
+    min-width: 0;
+}
+
+.drawer .field {
+    max-width: 100%;
 }
 
 .field label {
@@ -344,6 +379,8 @@ header {
 .field input,
 .field textarea {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -351,6 +388,22 @@ header {
     color: var(--text);
     outline: none;
     transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* منع حقول الإدخال من التمدد خارج حدود لوحة معلومات الطاولة */
+.drawer .field input,
+.drawer .field textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* إلغاء تمدد حقل ملاحظات إضافية - ارتفاع ثابت مع تمرير */
+#infoNotes {
+    resize: none;
+    min-height: 4.5em;
+    max-height: 4.5em;
+    overflow-y: auto;
 }
 
 [data-theme="light"] .field input,
@@ -553,6 +606,12 @@ canvas {
 
 .nav-section.active {
     display: flex;
+}
+
+/* منع تمدد قسم الطاولات (معلومات الطاولة) في الناف بار */
+#tablesNav.active {
+    flex: 0 0 auto;
+    max-width: 100%;
 }
 
 .back-btn {

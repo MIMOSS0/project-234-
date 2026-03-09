@@ -696,6 +696,7 @@ function makeTableGroup(group) {
         group.reserved = false
     }
     updateTableReservationAppearance(group)
+    applyTableLockState(group)
     group._lastGood = { left: group.left, top: group.top, angle: group.angle }
     group.off("mousedown")
     group.off("moving")
@@ -802,6 +803,19 @@ function updateTableReservationAppearance(group) {
     canvas.requestRenderAll()
 }
 
+function applyTableLockState(group) {
+    if (!group || (!group.tableGroup && group.name !== "table")) return
+    const locked = !!group.reserved
+    group.lockMovementX = locked
+    group.lockMovementY = locked
+    group.lockRotation = locked
+    if (group.controls && group.controls.mtr) {
+        group.controls.mtr.visible = !locked
+    }
+    group.setCoords()
+    canvas.requestRenderAll()
+}
+
 function updateReserveButtonUI() {
     const btn = document.getElementById("reserveBtn")
     if (!btn) return
@@ -835,6 +849,7 @@ function updateReserveButtonUI() {
 function setReservation(group, value) {
     group.reserved = !!value
     updateTableReservationAppearance(group)
+    applyTableLockState(group)
     updateReserveButtonUI()
     updateInfoFormUI()
     recalcStats()
