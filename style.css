@@ -275,7 +275,7 @@ header {
     top: 60px;
     right: 0;
     bottom: 0;
-    width: 280px;
+    width: 320px;
     background: var(--panel);
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     transform: translateX(100%);
@@ -289,15 +289,18 @@ header {
 }
 
 .drawer-header {
-    padding: 14px 16px;
+    padding: 16px 16px;
     font-weight: 800;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .drawer-content {
-    padding: 12px;
+    padding: 16px;
     display: grid;
-    grid-gap: 8px;
+    grid-gap: 12px;
 }
 
 .drawer-content hr {
@@ -319,6 +322,107 @@ header {
 .drawer-overlay.show {
     opacity: 1;
     pointer-events: auto;
+}
+
+.mini-stats {
+    display: inline-flex;
+    gap: 8px;
+    font-size: 12px;
+    opacity: .8;
+}
+
+.field {
+    display: grid;
+    grid-gap: 6px;
+}
+
+.field label {
+    font-size: 13px;
+    opacity: .85;
+}
+
+.field input,
+.field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+[data-theme="light"] .field input,
+[data-theme="light"] .field textarea {
+    background: #f4f7fb;
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+}
+
+.field input:focus,
+.field textarea:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .25);
+}
+
+.field input:disabled,
+.field textarea:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.actions-row {
+    display: flex;
+    gap: 8px;
+}
+
+.actions-row button {
+    flex: 1;
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, var(--btn-from), var(--btn-to));
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.actions-row button:hover {
+    background: linear-gradient(180deg, var(--btn-hover), var(--btn-to));
+    transform: translateY(-1px);
+}
+
+.actions-row button:active {
+    transform: translateY(0);
+}
+
+.actions-row button.danger {
+    background: linear-gradient(180deg, var(--danger-from), var(--danger-to));
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.actions-row button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.hint {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.actions button[disabled] {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.actions button.toggled {
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, .35), 0 8px 18px rgba(79, 70, 229, .35);
 }
 
 /* التخطيط */
@@ -437,4 +541,53 @@ canvas {
         font-weight: bold;
 
     }
+}
+
+/* نظام التنقل الجديد */
+.nav-section {
+    display: none;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.nav-section.active {
+    display: flex;
+}
+
+.back-btn {
+    background: linear-gradient(180deg, #4b5563, #374151) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.back-btn:hover {
+    background: linear-gradient(180deg, #6b7280, #4b5563) !important;
+}
+
+.nav-btn {
+    background: linear-gradient(180deg, #1e40af, #1e3a8a) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.nav-btn:hover {
+    background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.main-logo {
+    height: 40px; /* يمكنك التحكم في الارتفاع حسب الرغبة */
+    width: auto;
+    object-fit: contain;
+}
+
+/* لضمان توزيع العناصر في الهيدر بشكل جيد */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }

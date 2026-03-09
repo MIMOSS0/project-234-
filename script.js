@@ -26,6 +26,8 @@ let gridGroup = null
 let tableNumber = 1
 let totalSeats = 0
 let totalTables = 0
+let totalReservedTables = 0
+let totalReservedSeats = 0
 let isDragging = false
 let lastPosX = 0
 let lastPosY = 0
@@ -246,10 +248,7 @@ function addTable(lengthCM, seats) {
 
     tableNumber = Math.max(tableNumber, num + 1)
 
-    totalSeats += seats
-    totalTables++
-
-    updateStats()
+    recalcStats()
 
 }
 
@@ -261,6 +260,10 @@ function updateStats() {
 
     document.getElementById("seatCount").innerText = totalSeats
     document.getElementById("tableCount").innerText = totalTables
+    const rt = document.getElementById("reservedTableCount")
+    const rs = document.getElementById("reservedSeatCount")
+    if (rt) rt.innerText = totalReservedTables
+    if (rs) rs.innerText = totalReservedSeats
 
 }
 
@@ -294,11 +297,11 @@ function zoomOut() {
 
 function saveDesign() {
 
-    let json = JSON.stringify(canvas.toJSON())
+    let json = JSON.stringify(canvas.toJSON(["name", "tableNumber", "reserved", "info"]))
 
     localStorage.setItem("hallDesign", json)
 
-    alert("تم حفظ التصميم")
+    alert(t("saved"))
 
 }
 
@@ -320,8 +323,26 @@ function loadDesign() {
             canvas.requestRenderAll()
         },
         function (o, object) {
-            if (object && (object.name === "table" || object.tableGroup)) {
-                makeTableGroup(object)
+            if (object && object.type === "group") {
+                let isTable = !!(object.name === "table" || object.tableGroup)
+                if (!isTable) {
+                    const arr = object._objects || object.objects
+                    if (arr && Array.isArray(arr)) {
+                        const hasRect = arr.some(x => x.type === "rect")
+                        const txt = arr.find(x => x.type === "text")
+                        if (hasRect && txt) {
+                            object.name = "table"
+                            if (typeof object.tableNumber !== "number") {
+                                const n = parseInt(String(txt.text), 10)
+                                if (!isNaN(n)) object.tableNumber = n
+                            }
+                            isTable = true
+                        }
+                    }
+                }
+                if (isTable) {
+                    makeTableGroup(object)
+                }
             }
         }
     )
@@ -448,6 +469,8 @@ function resetView() {
     tableNumber = 1
     totalTables = 0
     totalSeats = 0
+    totalReservedTables = 0
+    totalReservedSeats = 0
     updateStats()
     fitToScreen()
 }
@@ -669,6 +692,10 @@ function makeTableGroup(group) {
             if (!isNaN(n)) group.tableNumber = n
         }
     }
+    if (typeof group.reserved !== "boolean") {
+        group.reserved = false
+    }
+    updateTableReservationAppearance(group)
     group._lastGood = { left: group.left, top: group.top, angle: group.angle }
     group.off("mousedown")
     group.off("moving")
@@ -681,28 +708,14 @@ function makeTableGroup(group) {
         group.top = Math.round(group.top / MOVE_STEP) * MOVE_STEP
         clampObjectInsideHall(group)
         group.setCoords()
-        if (hasOverlap(group)) {
-            group.left = group._lastGood.left
-            group.top = group._lastGood.top
-            group.angle = group._lastGood.angle
-            group.setCoords()
-        } else {
-            group._lastGood = { left: group.left, top: group.top, angle: group.angle }
-        }
+        group._lastGood = { left: group.left, top: group.top, angle: group.angle }
     })
     group.on("rotating", function () {
         let snapped = Math.round(group.angle / ROTATE_STEP) * ROTATE_STEP
         group.rotate(snapped)
         clampObjectInsideHall(group)
         group.setCoords()
-        if (hasOverlap(group)) {
-            group.left = group._lastGood.left
-            group.top = group._lastGood.top
-            group.angle = group._lastGood.angle
-            group.setCoords()
-        } else {
-            group._lastGood = { left: group.left, top: group.top, angle: group.angle }
-        }
+        group._lastGood = { left: group.left, top: group.top, angle: group.angle }
     })
 }
 
@@ -740,6 +753,8 @@ function deleteSelectedTable() {
 function recalcStats() {
     let tables = 0
     let seats = 0
+    let rTables = 0
+    let rSeats = 0
     canvas.getObjects().forEach(o => {
         if (o.tableGroup || o.name === "table") {
             tables++
@@ -749,15 +764,407 @@ function recalcStats() {
             else if (typeof o.size === "function") n = o.size()
             let chairs = Math.max(0, n - 2)
             seats += chairs
+            if (o.reserved) {
+                rTables++
+                rSeats += chairs
+            }
         }
     })
     totalTables = tables
     totalSeats = seats
+    totalReservedTables = rTables
+    totalReservedSeats = rSeats
     updateStats()
 }
 
+function getTableRect(group) {
+    if (!group) return null
+    if (group._objects && Array.isArray(group._objects)) {
+        const r = group._objects.find(x => x.type === "rect")
+        if (r) return r
+    }
+    if (group.objects && Array.isArray(group.objects)) {
+        const r = group.objects.find(x => x.type === "rect")
+        if (r) return r
+    }
+    return null
+}
+
+function updateTableReservationAppearance(group) {
+    const r = getTableRect(group)
+    if (!r) return
+    if (group.reserved) {
+        r.set({ fill: "#ffe0e0", stroke: "#c00" })
+    } else {
+        r.set({ fill: "#fff", stroke: "#000" })
+    }
+    group.setCoords()
+    canvas.requestRenderAll()
+}
+
+function updateReserveButtonUI() {
+    const btn = document.getElementById("reserveBtn")
+    if (!btn) return
+    const ic = btn.querySelector(".ic")
+    const lb = btn.querySelector(".lb")
+    const obj = canvas.getActiveObject()
+    let group = obj
+    if (obj && obj.type !== "group" && obj.group) group = obj.group
+    const valid = group && (group.tableGroup || group.name === "table")
+    btn.disabled = !valid
+    if (!valid) {
+        if (ic) ic.textContent = "🔓"
+        if (lb) lb.textContent = t("reserve")
+        btn.style.color = ""
+        btn.title = t("reserveTitle")
+        return
+    }
+    if (group.reserved) {
+        if (ic) ic.textContent = "🔒"
+        if (lb) lb.textContent = t("reserved")
+        btn.style.color = "#c00"
+        btn.title = t("unreserveTitle")
+    } else {
+        if (ic) ic.textContent = "🔓"
+        if (lb) lb.textContent = t("reserve")
+        btn.style.color = "#0a0"
+        btn.title = t("reserveTitle")
+    }
+}
+
+function setReservation(group, value) {
+    group.reserved = !!value
+    updateTableReservationAppearance(group)
+    updateReserveButtonUI()
+    updateInfoFormUI()
+    recalcStats()
+}
+
+function toggleReservationForSelectedTable() {
+    const obj = canvas.getActiveObject()
+    if (!obj) return
+    let group = obj
+    if (obj.type !== "group" && obj.group) group = obj.group
+    if (group && (group.tableGroup || group.name === "table")) {
+        setReservation(group, !group.reserved)
+    }
+}
+
+canvas.on("selection:created", () => updateReserveButtonUI())
+canvas.on("selection:updated", () => updateReserveButtonUI())
+canvas.on("selection:cleared", () => updateReserveButtonUI())
+canvas.on("selection:created", () => updateInfoFormUI())
+canvas.on("selection:updated", () => updateInfoFormUI())
+canvas.on("selection:cleared", () => updateInfoFormUI())
+
+function getSelectedTableGroup() {
+    const obj = canvas.getActiveObject()
+    if (!obj) return null
+    if (obj.type === "group") return (obj.tableGroup || obj.name === "table") ? obj : null
+    if (obj.group && (obj.group.tableGroup || obj.group.name === "table")) return obj.group
+    return null
+}
+
+function setInfoFormEnabled(enabled) {
+    const ids = ["infoName", "infoPhone", "infoGuests", "infoNotes", "infoSaveBtn", "infoClearBtn"]
+    ids.forEach(id => {
+        const el = document.getElementById(id)
+        if (el) el.disabled = !enabled
+    })
+}
+
+function loadInfoFromGroupToForm(group) {
+    const tn = document.getElementById("infoTableNumber")
+    const name = document.getElementById("infoName")
+    const phone = document.getElementById("infoPhone")
+    const guests = document.getElementById("infoGuests")
+    const notes = document.getElementById("infoNotes")
+    if (!tn || !name || !phone || !guests || !notes) return
+    tn.textContent = typeof group.tableNumber === "number" ? String(group.tableNumber) : "—"
+    const info = group.info || {}
+    name.value = info.name || ""
+    phone.value = info.phone || ""
+    guests.value = typeof info.guests === "number" ? String(info.guests) : ""
+    notes.value = info.notes || ""
+}
+
+function saveInfoForSelectedTable() {
+    const group = getSelectedTableGroup()
+    if (!group) return
+    const name = document.getElementById("infoName")?.value || ""
+    const phone = document.getElementById("infoPhone")?.value || ""
+    const guestsStr = document.getElementById("infoGuests")?.value || ""
+    const notes = document.getElementById("infoNotes")?.value || ""
+    const guests = guestsStr === "" ? undefined : Math.max(0, parseInt(guestsStr, 10) || 0)
+    group.info = { name, phone, guests, notes }
+    canvas.requestRenderAll()
+}
+
+function clearInfoForSelectedTable() {
+    const group = getSelectedTableGroup()
+    if (!group) return
+    group.info = undefined
+    const name = document.getElementById("infoName")
+    const phone = document.getElementById("infoPhone")
+    const guests = document.getElementById("infoGuests")
+    const notes = document.getElementById("infoNotes")
+    if (name) name.value = ""
+    if (phone) phone.value = ""
+    if (guests) guests.value = ""
+    if (notes) notes.value = ""
+}
+
+function updateInfoFormUI() {
+    const group = getSelectedTableGroup()
+    const has = !!group
+    setInfoFormEnabled(has)
+    if (has) {
+        loadInfoFromGroupToForm(group)
+    } else {
+        const tn = document.getElementById("infoTableNumber")
+        if (tn) tn.textContent = "—"
+    }
+}
+
+document.getElementById("infoSaveBtn")?.addEventListener("click", () => saveInfoForSelectedTable())
+document.getElementById("infoClearBtn")?.addEventListener("click", () => clearInfoForSelectedTable())
+
+// i18n
+let currentLang = (localStorage.getItem("lang") || "ar")
+const i18n = {
+    ar: {
+        grid: "الشبكة",
+        zoomIn: "تكبير",
+        zoomOut: "تصغير",
+        fit: "ملاءمة",
+        reset: "إعادة الضبط",
+        deleteTable: "حذف طاولة",
+        add: "إضافة",
+        save: "حفظ",
+        load: "تحميل",
+        export: "تصدير",
+        import: "استيراد",
+        image: "صورة",
+        theme: "الوضع",
+        language: "اللغة",
+        info: "معلومات",
+        tablesLabel: "الطاولات",
+        seatsLabel: "الكراسي",
+        reservedTablesLabel: "محجوز طاولات",
+        reservedSeatsLabel: "محجوز كراسي",
+        drawerTitle: "معلومات الطاولة",
+        customerName: "اسم العميل",
+        phone: "رقم الهاتف",
+        guests: "عدد الضيوف",
+        notes: "ملاحظات",
+        namePh: "مثال: أحمد علي",
+        phonePh: "05xxxxxxxx",
+        notesPh: "ملاحظات إضافية",
+        hint: "اختر طاولة من القاعة لتحرير معلوماتها.",
+        saved: "تم حفظ التصميم",
+        reserve: "حجز",
+        reserved: "محجوز",
+        reserveTitle: "حجز الطاولة",
+        unreserveTitle: "إلغاء الحجز",
+        infoSave: "حفظ",
+        infoClear: "مسح",
+        toggleLangTitle: "تبديل اللغة",
+        infoTitle: "معلومات الطاولة",
+        tableWord: "طاولة",
+        zoom: "الزووم",
+        tables: "الطاولات",
+        file: "الملف",
+        addTable: "إضافة طاولة",
+        reserveTable: "حجز طاولة",
+        tableInfo: "معلومات الطاولة",
+        saveDesign: "حفظ التصميم",
+        loadDesign: "تحميل التصميم",
+        exportJSON: "تصدير JSON",
+        importJSON: "استيراد JSON",
+        exportImage: "تصدير صورة",
+        back: "عودة"
+    },
+    en: {
+        grid: "Grid",
+        zoomIn: "Zoom In",
+        zoomOut: "Zoom Out",
+        fit: "Fit",
+        reset: "Reset",
+        deleteTable: "Delete Table",
+        add: "Add",
+        save: "Save",
+        load: "Load",
+        export: "Export",
+        import: "Import",
+        image: "Image",
+        theme: "Theme",
+        language: "Language",
+        info: "Info",
+        tablesLabel: "Tables",
+        seatsLabel: "Seats",
+        reservedTablesLabel: "Reserved Tables",
+        reservedSeatsLabel: "Reserved Seats",
+        drawerTitle: "Table Info",
+        customerName: "Customer Name",
+        phone: "Phone",
+        guests: "Guests",
+        notes: "Notes",
+        namePh: "e.g., Ahmed Ali",
+        phonePh: "05xxxxxxxx",
+        notesPh: "Additional notes",
+        hint: "Select a table to edit its info.",
+        saved: "Design saved",
+        reserve: "Reserve",
+        reserved: "Reserved",
+        reserveTitle: "Reserve table",
+        unreserveTitle: "Unreserve",
+        infoSave: "Save",
+        infoClear: "Clear",
+        toggleLangTitle: "Toggle language",
+        infoTitle: "Table Info",
+        tableWord: "Table",
+        zoom: "Zoom",
+        tables: "Tables",
+        file: "File",
+        addTable: "Add Table",
+        reserveTable: "Reserve Table",
+        tableInfo: "Table Info",
+        saveDesign: "Save Design",
+        loadDesign: "Load Design",
+        exportJSON: "Export JSON",
+        importJSON: "Import JSON",
+        exportImage: "Export Image",
+        back: "Back"
+    }
+}
+function t(key) {
+    const L = i18n[currentLang] || i18n.ar
+    return L[key] || key
+}
+function setDirForLang() {
+    const rtl = currentLang === "ar"
+    document.documentElement.setAttribute("dir", rtl ? "rtl" : "ltr")
+    document.documentElement.setAttribute("lang", currentLang)
+}
+function applyI18n() {
+    const setBtn = (id, labelKey, titleKey) => {
+        const b = document.getElementById(id)
+        if (!b) return
+        const lb = b.querySelector(".lb")
+        if (lb) lb.textContent = t(labelKey)
+        if (titleKey) b.title = t(titleKey)
+    }
+
+    // Update main buttons
+    setBtn("gridBtn", "grid", "grid")
+    setBtn("themeBtn", "theme", "theme")
+    setBtn("langBtn", "language", "toggleLangTitle")
+
+    // Update navigation buttons
+    document.querySelectorAll('.nav-btn .lb').forEach(lb => {
+        const text = lb.textContent.trim()
+        if (text === "الزووم") lb.textContent = t("zoom")
+        else if (text === "الطاولات") lb.textContent = t("tables")
+        else if (text === "الملف") lb.textContent = t("file")
+    })
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const title = btn.title
+        if (title === "الزووم") btn.title = t("zoom")
+        else if (title === "الطاولات") btn.title = t("tables")
+        else if (title === "الملف") btn.title = t("file")
+    })
+
+    // Update back buttons
+    document.querySelectorAll('.back-btn .lb').forEach(lb => {
+        if (lb.textContent.trim() === "عودة") {
+            lb.textContent = t("back")
+        }
+    })
+
+    document.querySelectorAll('.back-btn').forEach(btn => {
+        if (btn.title === "العودة") {
+            btn.title = t("back")
+        }
+    })
+
+    // Update navigation section buttons
+    document.querySelectorAll('.nav-section button .lb').forEach(lb => {
+        const text = lb.textContent.trim()
+        if (text === "تصغير") lb.textContent = t("zoomOut")
+        else if (text === "تكبير") lb.textContent = t("zoomIn")
+        else if (text === "ملاءمة") lb.textContent = t("fit")
+        else if (text === "إعادة الضبط") lb.textContent = t("reset")
+        else if (text === "إضافة طاولة") lb.textContent = t("addTable")
+        else if (text === "حذف طاولة") lb.textContent = t("deleteTable")
+        else if (text === "حجز طاولة") lb.textContent = t("reserveTable")
+        else if (text === "معلومات الطاولة") lb.textContent = t("tableInfo")
+        else if (text === "حفظ التصميم") lb.textContent = t("saveDesign")
+        else if (text === "تحميل التصميم") lb.textContent = t("loadDesign")
+        else if (text === "تصدير JSON") lb.textContent = t("exportJSON")
+        else if (text === "استيراد JSON") lb.textContent = t("importJSON")
+        else if (text === "تصدير صورة") lb.textContent = t("exportImage")
+    })
+
+    document.querySelectorAll('.nav-section button').forEach(btn => {
+        const title = btn.title
+        if (title === "تصغير") btn.title = t("zoomOut")
+        else if (title === "تكبير") btn.title = t("zoomIn")
+        else if (title === "ملاءمة") btn.title = t("fit")
+        else if (title === "إعادة الضبط") btn.title = t("reset")
+        else if (title === "إضافة طاولة") btn.title = t("addTable")
+        else if (title === "حذف طاولة") btn.title = t("deleteTable")
+        else if (title === "حجز الطاولة") btn.title = t("reserveTable")
+        else if (title === "معلومات الطاولة") btn.title = t("tableInfo")
+        else if (title === "حفظ التصميم") btn.title = t("saveDesign")
+        else if (title === "تحميل التصميم") btn.title = t("loadDesign")
+        else if (title === "تصدير JSON") btn.title = t("exportJSON")
+        else if (title === "استيراد JSON") btn.title = t("importJSON")
+        else if (title === "تصدير صورة") btn.title = t("exportImage")
+    })
+    const tl = document.getElementById("tableLabel"); if (tl) tl.textContent = t("tablesLabel")
+    const sl = document.getElementById("seatLabel"); if (sl) sl.textContent = t("seatsLabel")
+    const rtlb = document.getElementById("reservedTableLabel"); if (rtlb) rtlb.textContent = t("reservedTablesLabel")
+    const rslb = document.getElementById("reservedSeatLabel"); if (rslb) rslb.textContent = t("reservedSeatsLabel")
+    const tld = document.getElementById("tableLabelDrawer"); if (tld) tld.textContent = t("tablesLabel")
+    const sld = document.getElementById("seatLabelDrawer"); if (sld) sld.textContent = t("seatsLabel")
+    const rtld = document.getElementById("reservedTableLabelDrawer"); if (rtld) rtld.textContent = t("reservedTablesLabel")
+    const rsld = document.getElementById("reservedSeatLabelDrawer"); if (rsld) rsld.textContent = t("reservedSeatsLabel")
+    const dTitle = document.getElementById("drawerTitle"); if (dTitle) dTitle.textContent = t("drawerTitle")
+    const lName = document.getElementById("labelName"); if (lName) lName.textContent = t("customerName")
+    const lPhone = document.getElementById("labelPhone"); if (lPhone) lPhone.textContent = t("phone")
+    const lGuests = document.getElementById("labelGuests"); if (lGuests) lGuests.textContent = t("guests")
+    const lNotes = document.getElementById("labelNotes"); if (lNotes) lNotes.textContent = t("notes")
+    const inName = document.getElementById("infoName"); if (inName) inName.placeholder = t("namePh")
+    const inPhone = document.getElementById("infoPhone"); if (inPhone) inPhone.placeholder = t("phonePh")
+    const inNotes = document.getElementById("infoNotes"); if (inNotes) inNotes.placeholder = t("notesPh")
+    const sBtn = document.getElementById("infoSaveBtn"); if (sBtn) sBtn.title = t("save")
+    const sTxt = document.getElementById("infoSaveText"); if (sTxt) sTxt.textContent = t("infoSave")
+    const cBtn = document.getElementById("infoClearBtn"); if (cBtn) cBtn.title = t("infoClear")
+    const cTxt = document.getElementById("infoClearText"); if (cTxt) cTxt.textContent = t("infoClear")
+    const hint = document.getElementById("infoHint"); if (hint) hint.textContent = t("hint")
+    const addItems = document.querySelectorAll("#addMenu .addMenuItem")
+    addItems.forEach(btn => {
+        const seats = btn.getAttribute("data-seats")
+        if (seats) btn.textContent = `${t("tableWord")} ${seats}`
+    })
+    updateReserveButtonUI()
+}
+function initLanguage() {
+    setDirForLang()
+    applyI18n()
+}
+function toggleLanguage() {
+    currentLang = currentLang === "ar" ? "en" : "ar"
+    localStorage.setItem("lang", currentLang)
+    initLanguage()
+}
+
+// تهيئة اللغة بعد تعريف دوال وقاموس i18n
+initLanguage()
+
 function exportJSONFile() {
-    let json = JSON.stringify(canvas.toJSON())
+    let json = JSON.stringify(canvas.toJSON(["name", "tableNumber", "reserved", "info"]))
     let blob = new Blob([json], { type: "application/json" })
     let a = document.createElement("a")
     a.href = URL.createObjectURL(blob)
@@ -784,8 +1191,26 @@ function importJSONFile() {
                     canvas.requestRenderAll()
                 },
                 function (o, object) {
-                    if (object && (object.name === "table" || object.tableGroup)) {
-                        makeTableGroup(object)
+                    if (object && object.type === "group") {
+                        let isTable = !!(object.name === "table" || object.tableGroup)
+                        if (!isTable) {
+                            const arr = object._objects || object.objects
+                            if (arr && Array.isArray(arr)) {
+                                const hasRect = arr.some(x => x.type === "rect")
+                                const txt = arr.find(x => x.type === "text")
+                                if (hasRect && txt) {
+                                    object.name = "table"
+                                    if (typeof object.tableNumber !== "number") {
+                                        const n = parseInt(String(txt.text), 10)
+                                        if (!isNaN(n)) object.tableNumber = n
+                                    }
+                                    isTable = true
+                                }
+                            }
+                        }
+                        if (isTable) {
+                            makeTableGroup(object)
+                        }
                     }
                 }
             )
@@ -796,29 +1221,84 @@ function importJSONFile() {
 }
 
 function toggleAddMenu() {
-    const btn = document.getElementById("addBtn")
     const menu = document.getElementById("addMenu")
-    if (!btn || !menu) return
+    if (!menu) return
+
     const isOpen = menu.style.display === "block"
     if (isOpen) {
         menu.style.display = "none"
         return
     }
-    const r = btn.getBoundingClientRect()
-    menu.style.display = "block"
-    const mw = menu.offsetWidth || 200
-    let left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8))
-    menu.style.left = `${left}px`
-    menu.style.top = `${r.bottom + 8}px`
+
+    // Find the add table button in the current active navigation section
+    const addTableBtn = document.querySelector('.nav-section.active button[onclick*="toggleAddMenu"]')
+    if (addTableBtn) {
+        const r = addTableBtn.getBoundingClientRect()
+        menu.style.display = "block"
+        const mw = menu.offsetWidth || 200
+        let left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8))
+        menu.style.left = `${left}px`
+        menu.style.top = `${r.bottom + 8}px`
+    } else {
+        // Fallback: show menu in the center if button not found
+        menu.style.display = "block"
+        menu.style.left = "50%"
+        menu.style.top = "100px"
+        menu.style.transform = "translateX(-50%)"
+    }
+}
+
+function showNavSection(sectionId) {
+    // Hide all navigation sections
+    document.querySelectorAll('.nav-section').forEach(section => {
+        section.classList.remove('active')
+    })
+
+    // Show the requested section
+    const targetSection = document.getElementById(sectionId)
+    if (targetSection) {
+        targetSection.classList.add('active')
+    }
+}
+
+function toggleDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId)
+    if (!dropdown) return
+
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown').forEach(d => {
+        if (d.id !== dropdownId && d.classList.contains('open')) {
+            d.classList.remove('open')
+        }
+    })
+
+    // Toggle current dropdown
+    dropdown.classList.toggle('open')
 }
 
 document.addEventListener("click", (e) => {
-    const btn = document.getElementById("addBtn")
+    // Close add menu when clicking outside
     const menu = document.getElementById("addMenu")
-    if (!btn || !menu) return
-    if (!btn.contains(e.target) && !menu.contains(e.target)) {
-        menu.style.display = "none"
+    if (menu && menu.style.display === "block") {
+        // Check if click is outside the menu and outside any add table button
+        const isClickOnAddButton = e.target.closest('button[onclick*="toggleAddMenu"]')
+        const isClickInsideMenu = menu.contains(e.target)
+
+        if (!isClickOnAddButton && !isClickInsideMenu) {
+            menu.style.display = "none"
+        }
     }
+
+    // Close dropdowns when clicking outside
+    document.querySelectorAll('.dropdown').forEach(dropdown => {
+        const dropdownBtn = dropdown.querySelector('button')
+        const dropdownMenu = dropdown.querySelector('.menu')
+        if (dropdown.classList.contains('open') &&
+            !dropdownBtn.contains(e.target) &&
+            !dropdownMenu.contains(e.target)) {
+            dropdown.classList.remove('open')
+        }
+    })
 })
 
 function initTheme() {
@@ -840,9 +1320,14 @@ function toggleTheme() {
 function toggleDrawer() {
     const drawer = document.getElementById("drawer")
     const overlay = document.getElementById("drawerOverlay")
+    const infoBtn = document.getElementById("infoBtn")
     if (!drawer || !overlay) return
     const open = drawer.classList.toggle("open")
     overlay.classList.toggle("show", open)
+    if (infoBtn) {
+        infoBtn.classList.toggle("toggled", open)
+    }
+    updateInfoFormUI()
 }
 
 document.getElementById("drawerOverlay")?.addEventListener("click", () => toggleDrawer())
@@ -862,6 +1347,10 @@ updateStats = function () {
     _origUpdateStats()
     const seat = document.getElementById("seatCountDrawer")
     const table = document.getElementById("tableCountDrawer")
+    const rTable = document.getElementById("reservedTableCountDrawer")
+    const rSeat = document.getElementById("reservedSeatCountDrawer")
     if (seat) seat.innerText = totalSeats
     if (table) table.innerText = totalTables
+    if (rTable) rTable.innerText = totalReservedTables
+    if (rSeat) rSeat.innerText = totalReservedSeats
 }
