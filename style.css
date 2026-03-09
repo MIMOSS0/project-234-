@@ -346,6 +346,11 @@ canvas {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
+.canvas-container,
+canvas {
+    touch-action: none;
+}
+
 .grabbing {
     cursor: grabbing !important;
 }

@@ -513,6 +513,56 @@ canvas.on("mouse:wheel", (opt) => {
     opt.e.stopPropagation()
 })
 
+let _pinchActive = false
+let _pinchStartDist = 0
+let _pinchStartZoom = 1
+
+function _getPinchDistance(e) {
+    if (!e.touches || e.touches.length < 2) return 0
+    const x = e.touches[0].clientX - e.touches[1].clientX
+    const y = e.touches[0].clientY - e.touches[1].clientY
+    return Math.hypot(x, y)
+}
+
+function _getPinchCenterPoint(e) {
+    const rect = canvas.upperCanvasEl.getBoundingClientRect()
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+    return new fabric.Point(cx, cy)
+}
+
+canvas.wrapperEl.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length === 2) {
+        _pinchActive = true
+        _pinchStartDist = _getPinchDistance(e)
+        _pinchStartZoom = canvas.getZoom()
+        canvas.selection = false
+        canvas.skipTargetFind = true
+        e.preventDefault()
+    }
+}, { passive: false })
+
+canvas.wrapperEl.addEventListener("touchmove", (e) => {
+    if (!_pinchActive || !e.touches || e.touches.length !== 2) return
+    const dist = _getPinchDistance(e)
+    if (!_pinchStartDist) return
+    let newZoom = _pinchStartZoom * (dist / _pinchStartDist)
+    newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom))
+    const center = _getPinchCenterPoint(e)
+    canvas.zoomToPoint(center, newZoom)
+    clampViewport()
+    canvas.requestRenderAll()
+    e.preventDefault()
+}, { passive: false })
+
+canvas.wrapperEl.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) {
+        _pinchActive = false
+        canvas.selection = true
+        canvas.skipTargetFind = false
+    }
+}, { passive: false })
+
 function clampObjectInsideHall(obj) {
     const W = obj.width * obj.scaleX
     const H = obj.height * obj.scaleY
