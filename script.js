@@ -475,8 +475,17 @@ function resetView() {
     fitToScreen()
 }
 
+function isTypingInInput(e) {
+    const t = e.target
+    if (!t || !t.tagName) return false
+    const tag = t.tagName.toUpperCase()
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true
+    return !!t.isContentEditable
+}
+
 document.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
+        if (isTypingInInput(e)) return
         if (!spacePressed) {
             spacePressed = true
             canvas.wrapperEl.classList.add("grab")
@@ -487,6 +496,7 @@ document.addEventListener("keydown", (e) => {
 
 document.addEventListener("keyup", (e) => {
     if (e.code === "Space") {
+        if (isTypingInInput(e)) return
         spacePressed = false
         canvas.wrapperEl.classList.remove("grab")
     }
